@@ -1,4 +1,4 @@
-#from django.shortcuts import render
+from django.shortcuts import render ,get_object_or_404
 #from django.http import JsonResponse
 from student.models import students
 from .serializers import studentSerializers,employeeSerializer
@@ -8,7 +8,12 @@ from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from employees.models import Employee
 from django.http import Http404
-from rest_framework import mixins , generics
+from rest_framework import mixins , generics, viewsets
+from blogs.serializers import blogserializer, commentserializer
+from blogs.models import blogs,comment
+from .paginations import Custompagination
+from employees.filters import EmployeeFilter
+from rest_framework.filters import SearchFilter,OrderingFilter
 
 
 # Create your views here.
@@ -117,6 +122,7 @@ class Employeesdetails(mixins.UpdateModelMixin, mixins.RetrieveModelMixin, mixin
        return self.destroy(request, pk)
 '''
 
+'''
 class Employees(generics.ListCreateAPIView):
    queryset = Employee.objects.all()
    serializer_class = employeeSerializer
@@ -126,3 +132,67 @@ class Employeesdetails(generics.RetrieveUpdateDestroyAPIView):
    queryset = Employee.objects.all()
    serializer_class = employeeSerializer
    lookup_field = 'pk'
+
+'''
+'''
+class EmployeeViewset(viewsets.ViewSet):
+    def list(self, request):
+      queryset = Employee.objects.all()
+      serializer = employeeSerializer(queryset, many = True)
+      return Response (serializer.data, status= status.HTTP_200_OK)
+    
+    def create(self, request):
+        Serializer = employeeSerializer(data = request.data)
+        if Serializer.is_valid():
+            Serializer.save()
+            return Response(Serializer.data, status= status.HTTP_200_OK)
+        return Response (Serializer.errors)
+    
+    def retrieve(self, request, pk = None):
+        employee = get_object_or_404(Employee, pk = pk)
+        serializer = employeeSerializer(employee)
+        return Response (serializer.data, status= status.HTTP_200_OK)
+    
+    def update(self, request, pk = None ):
+        employee = get_object_or_404(Employee, pk= pk)
+        serializer = employeeSerializer(employee, data = request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response (serializer.data, status= status.HTTP_200_OK)
+        return Response(serializer.errors)
+    def delete (self, request, pk= None):
+        employee = get_object_or_404(Employee, pk = pk)
+        employee.delete()
+        return Response(status= status.HTTP_410_GONE)
+
+'''
+
+class EmployeeViewset(viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
+    serializer_class = employeeSerializer
+    pagination_class = Custompagination
+    filterset_class = EmployeeFilter
+
+
+
+class blogview(generics.ListCreateAPIView):
+    queryset = blogs.objects.all()
+    serializer_class = blogserializer
+    filter_backends = [SearchFilter,OrderingFilter] 
+    search_fields = ['blog_title']
+    ordering_fields =['id', 'blog_title'] 
+
+class commentview(generics.ListCreateAPIView):
+    queryset = comment.objects.all()
+    serializer_class = commentserializer
+
+class blogdetailview(generics.RetrieveUpdateDestroyAPIView):
+    queryset = blogs.objects.all()
+    serializer_class = blogserializer
+    lookup_field = 'pk'
+
+class commentdetailview(generics.RetrieveUpdateDestroyAPIView):
+    queryset = blogs.objects.all()
+    serializer_class = blogserializer
+    lookup_field = 'pk'
+ 
